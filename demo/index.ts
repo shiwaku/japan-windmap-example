@@ -52,4 +52,4 @@ image.onload = () => {
         _animate: true,
     });
 };
-image.src = 'wind_rgb.png';
+image.src = 'wind_rgb_20.png';
