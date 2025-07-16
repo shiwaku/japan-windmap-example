@@ -1,42 +1,64 @@
-import webpack from 'webpack';
-import * as path from 'path';
+// webpack.config.mjs
+import webpack from "webpack";
+import path from "path";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+
+// __dirname 相当（ESM では自前で作る）
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export default {
-    mode: 'development',
-    entry: './demo/index.ts',
-    plugins: [
-        new webpack.ProvidePlugin({
-            Promise: 'es6-promise',
-        }),
+  /* ------------- 基本設定 ------------- */
+  mode: "development", // production にすると自動で最適化
+  entry: "./demo/index.ts", // TypeScript のエントリポイント
+
+  /* ------------- プラグイン ------------- */
+  plugins: [
+    // 古い依存が Promise を期待する場合のポリフィル
+    new webpack.ProvidePlugin({ Promise: "es6-promise" }),
+  ],
+
+  /* ------------- 出力 ------------- */
+  output: {
+    filename: "index.bundle.js", // 生成される JS
+    path: path.resolve(__dirname, "demo"), // demo/ に書き出し
+  },
+
+  /* ------------- ローダー ------------- */
+  module: {
+    rules: [
+      {
+        test: /\.ts$/,
+        use: "ts-loader", // TypeScript → JS
+        exclude: /node_modules/,
+      },
+      {
+        test: /\.css$/,
+        use: ["style-loader", "css-loader"], // CSS をバンドル
+      },
+      {
+        test: /\.(png|jpe?g|gif)$/i, // 画像をコピー（必要なら）
+        type: "asset/resource",
+      },
     ],
-    output: {
-        filename: 'index.bundle.js',
-        path: path.resolve(
-            path.dirname(new URL(import.meta.url).pathname),
-            'demo',
-        ),
+  },
+
+  /* ------------- 解決拡張子 ------------- */
+  resolve: {
+    extensions: [".ts", ".js"],
+  },
+
+  /* ------------- ソースマップ ------------- */
+  devtool: "inline-source-map",
+
+  /* ------------- 開発サーバ ------------- */
+  devServer: {
+    static: {
+      directory: path.resolve(__dirname, "demo"), // demo を公開
+      watch: true,
     },
-    module: {
-        rules: [
-            {
-                test: /\.ts$/,
-                use: 'ts-loader',
-                exclude: /node_modules/,
-            },
-            {
-                test: /\.css$/,
-                use: ['style-loader', 'css-loader'],
-            },
-        ],
-    },
-    resolve: {
-        extensions: ['.ts', '.js'],
-    },
-    devtool: 'inline-source-map',
-    devServer: {
-        static: {
-            directory: './demo',
-            watch: true,
-        },
-    },
+    port: 8080, // 変更可
+    open: true, // 自動でブラウザを開く
+    hot: true,
+  },
 };

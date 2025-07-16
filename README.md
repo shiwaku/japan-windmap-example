@@ -1,37 +1,26 @@
 - データ出典: https://www.data.jma.go.jp/developer/gpv_sample.html
-  - 局地数値予報モデルＧＰＶ (ＬＦＭ)
-
+  - メソ数値予報モデルＧＰＶ (ＭＳＭ)
+    - 日本とその近海の領域を全球数値予報モデルよりも細かい格子間隔（5km）で、未来の気温、風、水蒸気量、日射量等の状態について、スーパーコンピュータを用いて3次元の格子で予測したデータ。39時間先まで（9時、21時（日本時間）初期値のものに限り78時間先まで）の予測を３時間毎に発表。
 - RGBエンコーディング手順
 ```
-# ────────────────────────────────────────────────
-# Step ①  風ベクトル成分（U=東西風・V=南北風）を GRIB2 から抽出
-#           -match には “10 m 上” のレイヤを示す正規表現を指定
-#           出力形式はそのまま GRIB2（-grib オプション）。
-#           ─▶ u.grib / v.grib が生成される
-# ────────────────────────────────────────────────
-wgrib2 Z__C_RJTD_20221221010000_LFM_GPV_Rjp_Lsurf_FH0100_grib2.bin \
-       -match ":UGRD:10 m" -grib u.grib         # U 成分（R チャンネル用）
-wgrib2 Z__C_RJTD_20221221010000_LFM_GPV_Rjp_Lsurf_FH0100_grib2.bin \
-       -match ":VGRD:10 m" -grib v.grib         # V 成分（G/B チャンネル用）
+# UGRD 一覧
+wgrib2 Z__C_RJTD_20171205000000_MSM_GPV_Rjp_Lsurf_FH00-15_grib2.bin -match ":UGRD:10 m" -s
 
-# ────────────────────────────────────────────────
-# Step ②  U・V を 3 バンド VRT に結合
-#           R = U   G = V   B = V（G を複製）
-#           → wind.vrt には 1201×1261 の 3 バンド仮想ラスタが出来る
-# ────────────────────────────────────────────────
+# VGRD 一覧
+wgrib2 Z__C_RJTD_20171205000000_MSM_GPV_Rjp_Lsurf_FH00-15_grib2.bin -match ":VGRD:10 m" -s
+
+# ① 解析値 (anl) だけを抽出　── ファイルは 1 バンドだけになる
+wgrib2 Z__C_RJTD_20171205000000_MSM_GPV_Rjp_Lsurf_FH00-15_grib2.bin \
+       -match ":UGRD:10 m above ground:anl:" -grib u.grib
+
+wgrib2 Z__C_RJTD_20171205000000_MSM_GPV_Rjp_Lsurf_FH00-15_grib2.bin \
+       -match ":VGRD:10 m above ground:anl:" -grib v.grib
+
+# ② R=U, G=V, B=V で 3 バンド VRT → PNG
 gdalbuildvrt -separate wind.vrt u.grib v.grib v.grib
+gdal_edit.py -a_srs EPSG:4326 wind.vrt               # 座標参照系を明示
 
-# ────────────────────────────────────────────────
-# Step ③  座標参照系 (EPSG:4326, 緯度経度) を明示
-#           gdalbuildvrt が SRS を継承しない場合の保険
-# ────────────────────────────────────────────────
-gdal_edit.py -a_srs EPSG:4326 wind.vrt
-
-# ────────────────────────────────────────────────
-# Step ④  8-bit へ線形スケールして PNG 化
-#           元値 -20〜+20 m s⁻¹ → 0〜255 にマッピング
-#           ─▶ wind_rgb_20.png（R=U, G=V, B=V）完成
-# ────────────────────────────────────────────────
+# ③ ±20 m s⁻¹ を 0–255 に線形スケール → PNG
 gdal_translate -ot Byte -scale -20 20 0 255 \
-               wind.vrt wind_rgb_20.png
+               wind.vrt wind_rgb.png
 ```
