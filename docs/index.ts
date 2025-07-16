@@ -52,4 +52,4 @@ image.onload = () => {
         _animate: true,
     });
 };
-image.src = 'lfmmodel_221221.png';
+image.src = 'wind_rgb.png';
